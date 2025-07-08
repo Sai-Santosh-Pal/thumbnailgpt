@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer components {
+    
     .btn {
         @apply px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center tracking-tight
     }
@@ -16,17 +17,61 @@
     }
 
     .logo-ticker-image {
-        @apply h-8 w-auto;
+        @apply h-[300px] w-auto;
     }
     .tag {
         @apply text-sm inline-flex border border-[#222]/10 px-3 py-1 rounded-lg tracking-tight;
     }
 
     .section-title{
-        @apply text-center text-3xl md:text-[54px] md:leading-[60px] font-bold tracking-tighter bg-gradient-to-b from-black to-[#034fdb] text-transparent bg-clip-text;
+        @apply text-center text-3xl md:text-[54px] md:leading-[60px] font-bold tracking-tighter bg-gradient-to-b from-black to-[#d32b0e] text-transparent bg-clip-text;
     }
 
     .section-description{
-        @apply text-center text-[22px] leading-[30px] tracking-tight text-[#010D3E];
+        @apply text-center text-[22px] leading-[30px] tracking-tight text-[#3e0101];
     }
+
+    .section-heading{
+        @apply max-w-[540px] mx-auto;
+    }
+
+    .card {
+        @apply p-10 border-solid border-[#F1F1F1] rounded-3xl shadow-[0_7px_14px_#EAEAEA] max-w-xs w-full;
+    }
+
+    .side-box {
+        height: 100%;
+        padding: 20px;
+    }
+
+
+    .hero{
+        width: 100%;
+        min-height: 100vh;
+        background: linear-gradient(#f1f1f1, #d32b0e);
+        display: flex;
+        align-content: center;
+        justify-content: center;
+    }
+
+    .droparea{
+        width: 1000px;
+        height: 400px;
+        padding: 30px;
+        background: rgb(243, 240, 240);
+        text-align: center;
+        border-radius: 1000px;
+        align-items: center;
+    }
+
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
