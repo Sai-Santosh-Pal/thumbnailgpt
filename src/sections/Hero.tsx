@@ -23,8 +23,8 @@ export const Hero = () => {
           <div className="flex gap-1 items-center mt-[30px]">
             <button className="btn btn-primary" onClick={() => router.push('/home')}>Get for free</button>
             <button className="btn btn-text gap-1">
-              <span>Learn more</span>
-              <ArrowIcon className='h-5 w-5'/>
+              {/* <span>Learn more</span>
+              <ArrowIcon className='h-5 w-5'/> */}
             </button>
           </div>
         </div>

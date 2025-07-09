@@ -14,10 +14,10 @@ export const Footer = () => {
           src = {logo}
           alt = "Saas Logo"
           height={40}
-          className="relative"
+          className="relative cursor-pointer"
         />
       </div>
-      <nav className="flex flex-col md:flex-row md:justify-center gap-6 mt-6">
+      {/* <nav className="flex flex-col md:flex-row md:justify-center gap-6 mt-6">
         <a href="#">About</a>
         <a href="#">Features</a>
         <a href="#">Customers</a>
@@ -31,8 +31,11 @@ export const Footer = () => {
         <SocialLinkedIn />
         <SocialPin />
         <SocialYoutube />
-      </div>
-      <p className="mt-6">ThumbnailGPT</p>
+      </div> */}
+      <p className="mt-6  cursor-pointer">ThumbnailGPT</p>
+      <p className='text-sm w-full px-[30px] section-description text-gray-600 italic'>
+            World's #1 Free Thumbnail Assistant
+          </p>
     </div>
   </footer>;
 };

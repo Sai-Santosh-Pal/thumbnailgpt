@@ -58,7 +58,7 @@ export const ProductShowcase = () => {
             <div className='tag'>Boost your productivity</div>
           </div>
           <h2 className='section-title mt-5'>
-            World's Only Free Thumbnail Assistant</h2>
+            World's #1 Free Thumbnail Assistant</h2>
           <p className='text-xl w-full px-[30px] section-description mt-5'>
             Effortlessly turn raw designs into high-performing YouTube thumbnails with instant, AI-driven feedback. Whether you're optimizing for CTR, clarity, or clickability — ThumbnailGPT gives you actionable insights, right when you need them.
           </p>
