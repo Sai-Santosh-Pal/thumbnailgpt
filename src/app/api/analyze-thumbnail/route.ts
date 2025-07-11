@@ -1,27 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
-// Use Gradio Spaces for segmentation and captioning
-const SEGMENTATION_SPACE = 'Xenova/segment-anything-web';
-const CAPTIONING_SPACE = 'hysts/image-captioning-with-blip';
+const CAPTIONING_SPACE = 'fancyfeast/joy-caption-alpha-two';
+const IMPROVEMENT_SPACE = 'huggingface-projects/gemma-3n-E4B-it';
 
-async function segmentImage(image: Blob) {
-  // Dynamically import @gradio/client (server-side only)
+async function joyCaptionImage({ image, caption_type, caption_length, name_input, custom_prompt }: {
+  image: Blob,
+  caption_type: string,
+  caption_length: string,
+  name_input: string,
+  custom_prompt: string
+}) {
   const { Client } = await import("@gradio/client");
-  const client = await Client.connect(SEGMENTATION_SPACE);
-  // The API endpoint and input keys may need to be adjusted based on the Space's API
-  // Here we assume the endpoint is /predict and input is { image }
-  const result = await client.predict("/segment", { image });
-  // result.data should contain the segments (e.g., as base64 images or blobs)
+  const hfToken = process.env.HUGGINGFACE_API_KEY;
+  if (!hfToken) throw new Error('HUGGINGFACE_API_KEY is not set in environment variables');
+  const client = await Client.connect(CAPTIONING_SPACE, {
+    hf_token: hfToken as `hf_${string}`,
+  });
+  const result = await client.predict("/stream_chat", {
+    input_image: image,
+    caption_type,
+    caption_length,
+    name_input,
+    custom_prompt
+  });
   return result.data;
 }
 
-async function captionSegment(segment: Blob) {
+async function getImprovements({ image, description }: { image: Blob, description: string }) {
   const { Client } = await import("@gradio/client");
-  const client = await Client.connect(CAPTIONING_SPACE);
-  // The API endpoint and input keys may need to be adjusted based on the Space's API
-  const result = await client.predict("/caption", { image: segment, text: "" });
+  const hfToken = process.env.HUGGINGFACE_API_KEY;
+  if (!hfToken) throw new Error('HUGGINGFACE_API_KEY is not set in environment variables');
+  const client = await Client.connect(IMPROVEMENT_SPACE, {
+    hf_token: hfToken as `hf_${string}`,
+  });
+  const result = await client.predict("/chat", {
+    message: {
+      text: `This is the description of the image: ${description}\nWhat could be improved about this thumbnail?`,
+      files: [image]
+    },
+    system_prompt: "You are a helpful assistant that gives suggestions for improving YouTube thumbnails.",
+    max_new_tokens: 200
+  });
   return result.data;
 }
 
@@ -33,40 +54,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
     }
 
-    // Step 0: Caption the original image
-    let imageDescription = null;
+    // Get custom fields or use defaults
+    const caption_type = formData.get("caption_type")?.toString() || "Descriptive";
+    const caption_length = formData.get("caption_length")?.toString() || "any";
+    const name_input = formData.get("name_input")?.toString() || "Person";
+    const custom_prompt = formData.get("custom_prompt")?.toString() || "this is a thumbnail";
+
+    let captionResult = null;
+    let improvementResult = null;
     try {
-      imageDescription = await captionSegment(file);
+      captionResult = await joyCaptionImage({
+        image: file,
+        caption_type,
+        caption_length,
+        name_input,
+        custom_prompt
+      });
+      // Use the caption as the description for the improvement model
+      const description = Array.isArray(captionResult) ? captionResult[1] : String(captionResult);
+      // Ensure the file is a Blob with a name and type property for Gradio
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const fileName = (file as any).name || 'thumbnail.png';
+      const mimeType = (file as any).type || 'image/png';
+      const fileForGradio = new Blob([buffer], { type: mimeType });
+      (fileForGradio as any).name = fileName;
+      improvementResult = await getImprovements({ image: fileForGradio, description });
     } catch (descErr) {
-      imageDescription = { error: descErr instanceof Error ? descErr.message : String(descErr) };
+      console.error('Error in joyCaptionImage or getImprovements:', descErr);
+      if (!captionResult) captionResult = { error: descErr instanceof Error ? descErr.message : String(descErr) };
+      if (!improvementResult) improvementResult = { error: descErr instanceof Error ? descErr.message : String(descErr) };
     }
 
-    // Step 1: Segment the image using the segmentation Space
-    let segments;
-    try {
-      segments = await segmentImage(file);
-    } catch (segErr) {
-      return NextResponse.json({ error: 'Segmentation failed: ' + (segErr instanceof Error ? segErr.message : String(segErr)) }, { status: 500 });
-    }
-
-    // Ensure segments is an array
-    if (!Array.isArray(segments)) {
-      return NextResponse.json({ error: 'Segmentation did not return an array of segments.' }, { status: 500 });
-    }
-
-    // Step 2: Caption each segment using the captioning Space
-    const captions = [];
-    for (const segment of segments) {
-      try {
-        const caption = await captionSegment(segment);
-        captions.push({ segment, caption });
-      } catch (capErr) {
-        captions.push({ segment, caption: null, error: capErr instanceof Error ? capErr.message : String(capErr) });
-      }
-    }
-
-    return NextResponse.json({ description: imageDescription, segments: captions });
+    return NextResponse.json({ caption: captionResult, improvements: improvementResult });
   } catch (error: any) {
+    console.error('Unhandled error in POST /api/analyze-thumbnail:', error, error?.stack);
     return NextResponse.json({ error: error.message || "Unknown error" }, { status: 500 });
   }
 } 

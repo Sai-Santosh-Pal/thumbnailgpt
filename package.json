@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@gradio/client": "^1.15.4",
+    "@gradio/client": "^1.15.5",
     "axios": "^1.10.0",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.14",
