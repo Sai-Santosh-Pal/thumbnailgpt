@@ -3,45 +3,96 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 const CAPTIONING_SPACE = 'fancyfeast/joy-caption-alpha-two';
-const IMPROVEMENT_SPACE = 'huggingface-projects/gemma-3n-E4B-it';
+const IMPROVEMENT_SPACE = 'huggingface-projects/llama-2-13b-chat';
 
-async function joyCaptionImage({ image, caption_type, caption_length, name_input, custom_prompt }: {
+async function joyCaptionImage({ image, caption_type, caption_length, name_input, custom_prompt, api_key }: {
   image: Blob,
   caption_type: string,
   caption_length: string,
   name_input: string,
-  custom_prompt: string
+  custom_prompt: string,
+  api_key?: string
 }) {
   const { Client } = await import("@gradio/client");
-  const hfToken = process.env.HUGGINGFACE_API_KEY;
-  if (!hfToken) throw new Error('HUGGINGFACE_API_KEY is not set in environment variables');
-  const client = await Client.connect(CAPTIONING_SPACE, {
-    hf_token: hfToken as `hf_${string}`,
-  });
-  const result = await client.predict("/stream_chat", {
-    input_image: image,
-    caption_type,
-    caption_length,
-    name_input,
-    custom_prompt
-  });
-  return result.data;
+  const hfToken = api_key || process.env.HUGGINGFACE_API_KEY;
+  if (!hfToken) throw new Error('HUGGINGFACE_API_KEY is not set in environment variables and no custom key provided');
+  if (!(image instanceof Blob) || image.size === 0) {
+    throw new Error('Input image is not a valid Blob or is empty.');
+  }
+  try {
+    const client = await Client.connect(CAPTIONING_SPACE, {
+      hf_token: hfToken as `hf_${string}`,
+    });
+    const result = await client.predict("/stream_chat", {
+      input_image: image,
+      caption_type,
+      caption_length,
+      extra_options: [],
+      name_input,
+      custom_prompt
+    });
+    return result.data;
+  } catch (err) {
+    console.error('Gradio client error in joyCaptionImage:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+    throw err;
+  }
 }
 
-async function getImprovements({ image, description }: { image: Blob, description: string }) {
+async function getImprovements({ description, api_key }: { description: string, api_key?: string }) {
   const { Client } = await import("@gradio/client");
-  const hfToken = process.env.HUGGINGFACE_API_KEY;
-  if (!hfToken) throw new Error('HUGGINGFACE_API_KEY is not set in environment variables');
+  const hfToken = api_key || process.env.HUGGINGFACE_API_KEY;
+  if (!hfToken) throw new Error('HUGGINGFACE_API_KEY is not set in environment variables and no custom key provided');
+
   const client = await Client.connect(IMPROVEMENT_SPACE, {
     hf_token: hfToken as `hf_${string}`,
   });
-  const result = await client.predict("/chat", {
-    message: {
-      text: `This is the description of the image: ${description}\nWhat could be improved about this thumbnail?`,
-      files: [image]
+  const prompt = `Improve this YouTube thumbnail description. Return the response strictly in this format (do NOT add any extra text, only output the JSON object, and make sure it is valid JSON):
+{
+  "summary": "Short explanation of what's good and what needs improvement.",
+  "improvements": [
+    {
+      "title": "Option 1 (Your title here)",
+      "description": "Rewritten thumbnail description here.",
+      "explanation": [
+        "Explain the main improvements and why they work.",
+        "Keep each point short and clear."
+      ]
     },
-    system_prompt: "You are a helpful assistant that gives suggestions for improving YouTube thumbnails.",
-    max_new_tokens: 200
+    {
+      "title": "Option 2 (Your title here)",
+      "description": "Another rewritten version.",
+      "explanation": [
+        "Different focus or tone from Option 1.",
+        "Highlight strategy behind changes."
+      ]
+    },
+    {
+      "title": "Option 3 (Your title here)",
+      "description": "Another alternative version.",
+      "explanation": [
+        "Optional: use a question-based or emotional hook.",
+        "Keep it engaging and direct."
+      ]
+    }
+  ],
+  "tips": [
+    "Keep text short and eye-catching.",
+    "Use emojis to convey emotion quickly.",
+    "Highlight benefits or create curiosity.",
+    "Make sure thumbnail text has high contrast."
+  ]
+}
+
+Description to improve:  
+${description}`;
+  const result = await client.predict("/chat", {
+    message: prompt,
+    param_2: "You are a helpful assistant.",
+    param_3: 1024,
+    param_4: 0.6,
+    param_5: 0.9,
+    param_6: 50,
+    param_7: 1.2
   });
   return result.data;
 }
@@ -59,6 +110,7 @@ export async function POST(req: NextRequest) {
     const caption_length = formData.get("caption_length")?.toString() || "any";
     const name_input = formData.get("name_input")?.toString() || "Person";
     const custom_prompt = formData.get("custom_prompt")?.toString() || "this is a thumbnail";
+    const custom_api_key = formData.get("custom_api_key")?.toString();
 
     let captionResult = null;
     let improvementResult = null;
@@ -68,27 +120,21 @@ export async function POST(req: NextRequest) {
         caption_type,
         caption_length,
         name_input,
-        custom_prompt
+        custom_prompt,
+        api_key: custom_api_key
       });
       // Use the caption as the description for the improvement model
       const description = Array.isArray(captionResult) ? captionResult[1] : String(captionResult);
-      // Ensure the file is a Blob with a name and type property for Gradio
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const fileName = (file as any).name || 'thumbnail.png';
-      const mimeType = (file as any).type || 'image/png';
-      const fileForGradio = new Blob([buffer], { type: mimeType });
-      (fileForGradio as any).name = fileName;
-      improvementResult = await getImprovements({ image: fileForGradio, description });
+      improvementResult = await getImprovements({ description, api_key: custom_api_key });
     } catch (descErr) {
-      console.error('Error in joyCaptionImage or getImprovements:', descErr);
-      if (!captionResult) captionResult = { error: descErr instanceof Error ? descErr.message : String(descErr) };
-      if (!improvementResult) improvementResult = { error: descErr instanceof Error ? descErr.message : String(descErr) };
+      console.error('Error in joyCaptionImage or getImprovements:', JSON.stringify(descErr, Object.getOwnPropertyNames(descErr)));
+      if (!captionResult) captionResult = { error: descErr instanceof Error ? descErr.message : String(descErr), details: descErr };
+      if (!improvementResult) improvementResult = { error: descErr instanceof Error ? descErr.message : String(descErr), details: descErr };
     }
 
     return NextResponse.json({ caption: captionResult, improvements: improvementResult });
   } catch (error: any) {
-    console.error('Unhandled error in POST /api/analyze-thumbnail:', error, error?.stack);
-    return NextResponse.json({ error: error.message || "Unknown error" }, { status: 500 });
+    console.error('Unhandled error in POST /api/analyze-thumbnail:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    return NextResponse.json({ error: error.message || "Unknown error", details: error }, { status: 500 });
   }
 } 
