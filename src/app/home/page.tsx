@@ -83,16 +83,56 @@ export default function HomePage() {
         {description && suggestions && (
           <div className="mb-4">
             <strong>Improvement Suggestions:</strong>
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>
-              {(() => {
-                try {
-                  const obj = typeof suggestions === 'string' ? JSON.parse(suggestions) : suggestions;
-                  return JSON.stringify(obj, null, 2);
-                } catch {
-                  return typeof suggestions === 'string' ? suggestions : JSON.stringify(suggestions);
+            {(() => {
+              let obj;
+              // Try to extract JSON from the output, even if surrounded by extra text
+              try {
+                let str = Array.isArray(suggestions) ? suggestions[0] : suggestions;
+                if (typeof str !== 'string') str = JSON.stringify(str);
+                // Find the first '{' and last '}' to extract the JSON block
+                const firstBrace = str.indexOf('{');
+                const lastBrace = str.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                  str = str.substring(firstBrace, lastBrace + 1);
                 }
-              })()}
-            </pre>
+                obj = JSON.parse(str);
+              } catch {
+                return <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>{typeof suggestions === 'string' ? suggestions : JSON.stringify(suggestions)}</pre>;
+              }
+              return (
+                <div style={{ background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>
+                  {obj.summary && <div style={{ marginBottom: '1em' }}><strong>Summary:</strong> {obj.summary}</div>}
+                  {obj.improvements && (
+                    <div style={{ marginBottom: '1em' }}>
+                      <strong>Improvement Options:</strong>
+                      <ol>
+                        {obj.improvements.map((imp: any, idx: number) => (
+                          <li key={idx} style={{ marginBottom: '1em' }}>
+                            <div><strong>{imp.title}</strong></div>
+                            <div><em>{imp.description}</em></div>
+                            <ul>
+                              {imp.explanation && imp.explanation.map((exp: any, i: number) => (
+                                <li key={i}>{exp}</li>
+                              ))}
+                            </ul>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {obj.tips && (
+                    <div>
+                      <strong>Tips:</strong>
+                      <ul>
+                        {obj.tips.map((tip: any, i: number) => (
+                          <li key={i}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
         {enhancements && (
