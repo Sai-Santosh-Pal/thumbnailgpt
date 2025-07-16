@@ -5,6 +5,7 @@ import upload from "../../assets/upload.png"
 import { useState } from "react";
 // TODO: Add a loading state
 export default function HomePage() {
+  console.log("HomePage component rendered");
   // Only keep file and customApiKey state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -23,6 +24,7 @@ export default function HomePage() {
   };
 
   const handleUpload = async () => {
+    console.log("Upload clicked");
     if (!selectedFile) return;
     setLoading(true);
     setDescription("");
@@ -42,6 +44,7 @@ export default function HomePage() {
       body: formData,
     });
     const data = await res.json();
+    console.log("API response", data);
     setDescription(data.caption?.[1] || "");
     setEnhancements("");
     setSuggestions(data.improvements || "");
@@ -58,13 +61,13 @@ export default function HomePage() {
             <Image src={upload} alt="Upload Icon" width={50}/>
           )}
           <input type="file" accept="image/*" onChange={handleFileChange} className="mt-2" />
-          <div className="w-full mt-2">
-            <label className="block mb-1">Custom Hugging Face API Key (optional)</label>
-            <input type="text" value={customApiKey} onChange={e => setCustomApiKey(e.target.value)} className="w-full border rounded p-1" placeholder="hf_xxx..." />
-          </div>
         </div>
         <div id="buttons" className="rounded-l h-[10%] w-[100%] p-2 flex flex-col justify-center">
-          <button className="btn w-50 btn-primary h-10" onClick={handleUpload} disabled={!selectedFile || loading}>
+          <button
+            className="btn w-50 btn-primary h-10"
+            onClick={() => { console.log("Button clicked"); handleUpload(); }}
+            disabled={!selectedFile || loading}
+          >
             {loading ? "Analyzing..." : "Analyze Thumbnail"}
           </button>
           <button className="text-xs mt-2 text-grey" disabled>
@@ -74,6 +77,7 @@ export default function HomePage() {
       </div>
       <div id="right-section" className="rounded-xl flex flex-col justify-center items-center w-[48%] h-full border-[1px] border-black-700 p-10 ">
         <h1 className="mb-4">Results</h1>
+        <div style={{ maxHeight: '400px', overflowY: 'auto', width: '100%' }}>
         {description && (
           <div className="mb-4">
             <strong>Description:</strong>
@@ -85,19 +89,14 @@ export default function HomePage() {
             <strong>Improvement Suggestions:</strong>
             {(() => {
               let obj;
-              // Try to extract JSON from the output, even if surrounded by extra text
               try {
-                let str = Array.isArray(suggestions) ? suggestions[0] : suggestions;
-                if (typeof str !== 'string') str = JSON.stringify(str);
-                // Find the first '{' and last '}' to extract the JSON block
-                const firstBrace = str.indexOf('{');
-                const lastBrace = str.lastIndexOf('}');
-                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-                  str = str.substring(firstBrace, lastBrace + 1);
-                }
-                obj = JSON.parse(str);
+                obj = typeof suggestions === 'string' ? JSON.parse(suggestions) : suggestions;
               } catch {
-                return <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>{typeof suggestions === 'string' ? suggestions : JSON.stringify(suggestions)}</pre>;
+                return (
+                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>
+                    {typeof suggestions === 'string' ? suggestions : JSON.stringify(suggestions)}
+                  </pre>
+                );
               }
               return (
                 <div style={{ background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>
@@ -107,10 +106,10 @@ export default function HomePage() {
                       <strong>Improvement Options:</strong>
                       <ol>
                         {obj.improvements.map((imp: any, idx: number) => (
-                          <li key={idx} style={{ marginBottom: '1em' }}>
+                          <li key={idx} style={{ marginBottom: '1em', paddingLeft: '0.5em' }}>
                             <div><strong>{imp.title}</strong></div>
-                            <div><em>{imp.description}</em></div>
-                            <ul>
+                            <div style={{ fontStyle: 'italic', marginBottom: '0.5em' }}>{imp.description}</div>
+                            <ul style={{ marginLeft: '1em', listStyle: 'disc' }}>
                               {imp.explanation && imp.explanation.map((exp: any, i: number) => (
                                 <li key={i}>{exp}</li>
                               ))}
@@ -123,7 +122,7 @@ export default function HomePage() {
                   {obj.tips && (
                     <div>
                       <strong>Tips:</strong>
-                      <ul>
+                      <ul style={{ marginLeft: '1em', listStyle: 'circle' }}>
                         {obj.tips.map((tip: any, i: number) => (
                           <li key={i}>{tip}</li>
                         ))}
@@ -141,6 +140,7 @@ export default function HomePage() {
             <p>{enhancements}</p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
