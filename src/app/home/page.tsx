@@ -78,68 +78,66 @@ export default function HomePage() {
       <div id="right-section" className="rounded-xl flex flex-col justify-center items-center w-[48%] h-full border-[1px] border-black-700 p-10 ">
         <h1 className="mb-4">Results</h1>
         <div style={{ maxHeight: '400px', overflowY: 'auto', width: '100%' }}>
-        {description && (
-          <div className="mb-4">
-            <strong>Description:</strong>
-            <p>{description}</p>
-          </div>
-        )}
-        {description && suggestions && (
-          <div className="mb-4">
-            <strong>Improvement Suggestions:</strong>
-            {(() => {
-              let obj;
-              try {
-                obj = typeof suggestions === 'string' ? JSON.parse(suggestions) : suggestions;
-              } catch {
+          {description && (
+            <div className="mb-4" style={{ background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>
+              <strong style={{ fontSize: '1.1em' }}>Description:</strong>
+              <div style={{ marginTop: '0.5em', marginBottom: '0.5em', lineHeight: 1.6 }}>{description}</div>
+            </div>
+          )}
+          {description && suggestions && (
+            <div className="mb-4" style={{ background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>
+              <strong style={{ fontSize: '1.1em' }}>Improvement Suggestions:</strong>
+              {(() => {
+                let obj;
+                try {
+                  obj = typeof suggestions === 'string' ? JSON.parse(suggestions) : suggestions;
+                } catch {
+                  return (
+                    <div style={{ marginTop: '0.5em', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{suggestions}</div>
+                  );
+                }
                 return (
-                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>
-                    {typeof suggestions === 'string' ? suggestions : JSON.stringify(suggestions)}
-                  </pre>
+                  <div style={{ marginTop: '0.5em' }}>
+                    {obj.summary && <div style={{ marginBottom: '1em' }}><strong>Summary:</strong> <span style={{ fontWeight: 400 }}>{obj.summary}</span></div>}
+                    {obj.improvements && (
+                      <div style={{ marginBottom: '1em' }}>
+                        <strong>Improvement Options:</strong>
+                        <ol style={{ paddingLeft: '1.2em' }}>
+                          {obj.improvements.map((imp: any, idx: number) => (
+                            <li key={idx} style={{ marginBottom: '1em' }}>
+                              <div><strong>{imp.title}</strong></div>
+                              <div style={{ fontStyle: 'italic', marginBottom: '0.5em' }}>{imp.description}</div>
+                              <ul style={{ marginLeft: '1em', listStyle: 'disc' }}>
+                                {imp.explanation && imp.explanation.map((exp: any, i: number) => (
+                                  <li key={i}>{exp}</li>
+                                ))}
+                              </ul>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                    {obj.tips && (
+                      <div>
+                        <strong>Tips:</strong>
+                        <ul style={{ marginLeft: '1em', listStyle: 'circle' }}>
+                          {obj.tips.map((tip: any, i: number) => (
+                            <li key={i}>{tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 );
-              }
-              return (
-                <div style={{ background: '#f5f5f5', padding: '1em', borderRadius: '8px' }}>
-                  {obj.summary && <div style={{ marginBottom: '1em' }}><strong>Summary:</strong> {obj.summary}</div>}
-                  {obj.improvements && (
-                    <div style={{ marginBottom: '1em' }}>
-                      <strong>Improvement Options:</strong>
-                      <ol>
-                        {obj.improvements.map((imp: any, idx: number) => (
-                          <li key={idx} style={{ marginBottom: '1em', paddingLeft: '0.5em' }}>
-                            <div><strong>{imp.title}</strong></div>
-                            <div style={{ fontStyle: 'italic', marginBottom: '0.5em' }}>{imp.description}</div>
-                            <ul style={{ marginLeft: '1em', listStyle: 'disc' }}>
-                              {imp.explanation && imp.explanation.map((exp: any, i: number) => (
-                                <li key={i}>{exp}</li>
-                              ))}
-                            </ul>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-                  {obj.tips && (
-                    <div>
-                      <strong>Tips:</strong>
-                      <ul style={{ marginLeft: '1em', listStyle: 'circle' }}>
-                        {obj.tips.map((tip: any, i: number) => (
-                          <li key={i}>{tip}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        )}
-        {enhancements && (
-          <div>
-            <strong>Enhancement Suggestions:</strong>
-            <p>{enhancements}</p>
-          </div>
-        )}
+              })()}
+            </div>
+          )}
+          {enhancements && (
+            <div>
+              <strong>Enhancement Suggestions:</strong>
+              <p>{enhancements}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

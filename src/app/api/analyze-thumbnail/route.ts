@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = 'moonshotai/kimi-vl-a3b-thinking:free@preset/thumbnailgpt';
-
+const OPENROUTER_MODEL = '@preset/thumbnailgpt';
+console.log('OPENROUTER_API_KEY:', OPENROUTER_API_KEY);
 // Helper to convert Blob/File to base64 data URL string with correct MIME type
 async function fileToBase64DataUrl(file: Blob): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
@@ -36,7 +36,7 @@ async function openrouterCaption({ image, caption_type, caption_length, name_inp
       'X-Title': 'ThumbnailGPT'
     },
     body: JSON.stringify({
-      model: OPENROUTER_MODEL,
+      model: 'moonshotai/kimi-vl-a3b-thinking:free',
       messages: [
         {
           role: 'user',
@@ -50,16 +50,17 @@ async function openrouterCaption({ image, caption_type, caption_length, name_inp
     })
   });
   const data = await res.json();
+  console.log('OpenRouter API raw response (caption):', data);
+  if (data.error) {
+    console.error('OpenRouter API error (caption):', data.error);
+    return data.error.message || '';
+  }
   return data.choices?.[0]?.message?.content || '';
 }
 
 // Call OpenRouter for improvement suggestions
 async function openrouterImprovements({ description }: { description: string }) {
-  const prompt = `Improve this YouTube thumbnail description. Return the response strictly in this format (do NOT add any extra text, only output the JSON object, and make sure it is valid JSON):\n{\n  "summary": "Short explanation of what's good and what needs improvement.",\n  "improvements": [\n    {\n      "title": "Option 1 (Your title here)",\n      "description": "Rewritten thumbnail description here.",\n      "explanation": [\n        "Explain the main improvements and why they work.",\n        "Keep each point short and clear."
-      ]\n    },\n    {\n      "title": "Option 2 (Your title here)",\n      "description": "Another rewritten version.",\n      "explanation": [\n        "Different focus or tone from Option 1.",\n        "Highlight strategy behind changes."
-      ]\n    },\n    {\n      "title": "Option 3 (Your title here)",\n      "description": "Another alternative version.",\n      "explanation": [\n        "Optional: use a question-based or emotional hook.",\n        "Keep it engaging and direct."
-      ]\n    }\n  ],\n  "tips": [\n    "Keep text short and eye-catching.",\n    "Use emojis to convey emotion quickly.",\n    "Highlight benefits or create curiosity.",\n    "Make sure thumbnail text has high contrast."
-  ]\n}\n\nDescription to improve:  \n${description}`;
+  const prompt = `Improve this YouTube thumbnail description. Return the response strictly in this format (do NOT add any extra text, only output the JSON object, and make sure it is valid JSON):\n{\n  "summary": "Short explanation of what's good and what needs improvement.",\n  "improvements": [\n    {\n      "title": "Option 1 (Your title here)",\n      "description": "Rewritten thumbnail description here.",\n      "explanation": [\n        "Explain the main improvements and why they work.",\n        "Keep each point short and clear."\n      ]\n    },\n    {\n      "title": "Option 2 (Your title here)",\n      "description": "Another rewritten version.",\n      "explanation": [\n        "Different focus or tone from Option 1.",\n        "Highlight strategy behind changes."\n      ]\n    },\n    {\n      "title": "Option 3 (Your title here)",\n      "description": "Another alternative version.",\n      "explanation": [\n        "Optional: use a question-based or emotional hook.",\n        "Keep it engaging and direct."\n      ]\n    }\n  ],\n  "tips": [\n    "Keep text short and eye-catching.",\n    "Use emojis to convey emotion quickly.",\n    "Highlight benefits or create curiosity.",\n    "Make sure thumbnail text has high contrast."\n  ]\n}\n\nDescription to improve:  \n${description}`;
   const res = await fetch(OPENROUTER_API_URL, {
     method: 'POST',
     headers: {
@@ -69,13 +70,24 @@ async function openrouterImprovements({ description }: { description: string }) 
       'X-Title': 'ThumbnailGPT'
     },
     body: JSON.stringify({
-      model: OPENROUTER_MODEL,
+      model: 'moonshotai/kimi-k2:free/thumbnailgpt',
       messages: [
-        { role: 'user', content: prompt }
-      ]
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt }
+          ]
+        }
+      ],
+      max_tokens: 512
     })
   });
   const data = await res.json();
+  console.log('OpenRouter API raw response (improvements):', data);
+  if (data.error) {
+    console.error('OpenRouter API error (improvements):', data.error);
+    return data.error.message || '';
+  }
   return data.choices?.[0]?.message?.content || '';
 }
 
