@@ -1,4 +1,4 @@
-<img width="1349" height="630" alt="image" src="https://github.com/user-attachments/assets/91d1fe6e-b4f4-4eee-837c-6e1ca879e4f5" /># 📸 ThumbnailGPT
+# 📸 ThumbnailGPT
 
 **ThumbnailGPT** is an AI-powered web app that helps creators generate, evaluate, and enhance YouTube thumbnails using computer vision and natural language processing.
 
